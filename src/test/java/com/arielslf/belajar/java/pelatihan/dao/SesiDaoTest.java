@@ -4,6 +4,8 @@ import com.arielslf.belajar.java.pelatihan.PelatihanApplication;
 import com.arielslf.belajar.java.pelatihan.entity.Materi;
 import com.arielslf.belajar.java.pelatihan.entity.Peserta;
 import com.arielslf.belajar.java.pelatihan.entity.Sesi;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -32,6 +34,9 @@ public class SesiDaoTest {
     
     @Autowired
     private SesiDao sd;
+    
+    @Autowired
+    private DataSource ds;
     
     @Test
     public void testCariByMateri(){
@@ -69,11 +74,53 @@ public class SesiDaoTest {
     }
     
 
-
+    @Test
+    public void testSaveSesi() throws Exception{
+        Peserta p1 = new Peserta();
+        p1.setId("aa1");
+        
+        Peserta p2 = new Peserta();
+        p2.setId("aa3");
+        
+        Materi m = new Materi();
+        m.setId("aa8");
+        
+        SimpleDateFormat formater = new SimpleDateFormat("yyyy-MM-dd");
+        Date sejak = formater.parse("2015-02-01");
+        Date sampai = formater.parse("2015-02-03");
+        
+        Sesi s = new Sesi();
+        s.setMateri(m);
+        s.setMulai(sejak);
+        s.setSampai(sampai);  
+        s.getDaftarPeserta().add(p1);
+        s.getDaftarPeserta().add(p2);
+        
+        sd.save(s);
+        String idSesiBaru = s.getId();
+        Assert.assertNotNull(idSesiBaru);
+        System.out.println("ID Baru : "+s.getId());
+        
+        String sql = "select count(*) from sesi where id_materi='aa8'";
+        String sqlManyToMany = "select count(*) from peserta_pelatihan "
+                + " where id_sesi=?";
+        
+        try(Connection c = ds.getConnection()){
+            // cek table sesi
+            ResultSet rs = c.createStatement().executeQuery(sql);
+            Assert.assertNotNull(rs.next());
+            Assert.assertEquals(1L, rs.getLong(1));
+            
+            // cek tabel relasi many to many dengan peserta
+            PreparedStatement ps = c.prepareStatement(sqlManyToMany);
+            ps.setString(1, idSesiBaru);
+            ResultSet rs2 = ps.executeQuery();
+            
+            Assert.assertTrue(rs2.next());
+            Assert.assertEquals(2L, rs2.getLong(1));
+        }
+        
+    }
     
-    
-
-    
-    
-    
+ 
 }
