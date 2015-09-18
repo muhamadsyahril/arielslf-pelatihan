@@ -1,9 +1,13 @@
 package com.arielslf.belajar.java.pelatihan.dao;
 
 import com.arielslf.belajar.java.pelatihan.PelatihanApplication;
+import com.arielslf.belajar.java.pelatihan.entity.Materi;
 import com.arielslf.belajar.java.pelatihan.entity.Peserta;
+import com.arielslf.belajar.java.pelatihan.entity.Sesi;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.sql.DataSource;
 import org.junit.After;
@@ -13,6 +17,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -20,71 +26,50 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @SpringApplicationConfiguration(classes = PelatihanApplication.class)
 @Sql(
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
-        scripts = "/data/peserta.sql"
+        scripts = {"/data/peserta.sql", "/data/materi.sql", "/data/sesi.sql"}
 )
-public class PesertaDaoTest {
+public class SesiDaoTest {
     
     @Autowired
-    private PesertaDao pd;
-    
-    @Autowired
-    private DataSource ds;
-    
-    
-    @After
-    public void hapusData() throws SQLException{
-        String sql = "delete from peserta where email = 'peserta001@gmail.com'";
-             try (java.sql.Connection c = ds.getConnection()) {
-                 c.createStatement().executeUpdate(sql);
-             }
-        
-    }
+    private SesiDao sd;
     
     @Test
-    public void testInsert() throws SQLException{
-        Peserta p = new Peserta();
-        p.setNama("Peserta 001");
-        p.setEmail("peserta001@gmail.com");
-        p.setTanggalLahir(new Date());
+    public void testCariByMateri(){
+        Materi m = new Materi();
+        m.setId("aa6");
         
-        pd.save(p);
+        PageRequest page = new PageRequest(0, 5);
         
-      
+        Page<Sesi> hasilQuery = sd.findByMateri(m, page);
+        Assert.assertEquals(2L, hasilQuery.getTotalElements());
         
-        String sql = "select count(*) as jumlah"
-                + " from peserta "
-                + " where email = 'peserta001@gmail.com'";
+        Assert.assertFalse(hasilQuery.getContent().isEmpty());
+        Sesi s = hasilQuery.getContent().get(0);
+        Assert.assertNotNull(s);
+        Assert.assertEquals("Java Fundamental", s.getMateri().getNama());
         
-        try (java.sql.Connection c = ds.getConnection()) {
-            ResultSet rs = c.createStatement().executeQuery(sql);
-            Assert.assertTrue(rs.next());
-            
-            
-            Long jumlahRow = rs.getLong("jumlah");
-            Assert.assertEquals(1L, jumlahRow.longValue());
-        }
         
     }
-    
+
     @Test
-    public void testHitung(){
-        Long jumlah = pd.count();
-        Assert.assertEquals(3L, jumlah.longValue());
-    }
-    
-    
-    @Test
-    public void testCariById(){
-        Peserta p = pd.findOne("aa1");
+    public void testCariBerdasarkanTanggalMulaiDanKodeMateri() throws Exception {
+        PageRequest page = new PageRequest(0, 5);
         
-        Assert.assertNotNull(p);
-        Assert.assertEquals("Peserta Test 001", p.getNama());
-        Assert.assertEquals("peserta.test.001@gmail.com", p.getEmail());
+        SimpleDateFormat formater = new SimpleDateFormat("yyyy-MM-dd");
+        Date sejak = formater.parse("2015-01-01");
+        Date sampai = formater.parse("2015-01-03");
         
-        Peserta px = pd.findOne("xx");
-        Assert.assertNull(px);
+        Page<Sesi> hasil = sd.cariBerdasarkanTanggalMulaiDanKodeMateri(sejak, sampai, "JF-002", page);
+        Assert.assertEquals(1L, hasil.getTotalElements());
+        Assert.assertFalse(hasil.getContent().isEmpty());
+        
+        Sesi s = hasil.getContent().get(0);
+        Assert.assertEquals("Java Web", s.getMateri().getNama());
         
     }
+    
+
+
     
     
 
